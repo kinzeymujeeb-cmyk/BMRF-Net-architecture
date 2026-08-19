@@ -1,104 +1,135 @@
-# <p align=center>`Referring Camouflaged Object Detection `</p>
-> **Authors:**
-> [Xuying Zhang](https://zhangxuying1004.github.io/),
-> [Bowen Yin](http://yinbowen-chn.github.io/),
-> [Zheng Lin](https://www.lin-zheng.com/),
-> [Qibin Hou](https://houqb.github.io/),
-> [Deng-Ping Fan](https://dengpingfan.github.io/), 
-> [Ming-Ming Cheng](https://mmcheng.net/).
+# BMRF-Net — Boundary-Aware Multi-Scale Referring Fusion
 
-## Introduction
-This repo contains the official dataset and source code of our paper [_Referring Camouflaged Object Detection_](https://arxiv.org/pdf/2306.07532.pdf) accepted by TPAMI 2025.   
-In this paper, we consider the problem of referring camouflaged object detection (Ref-COD), a new task that aims to segment specified
-camouflaged objects based on a small set of referring images with salient target objects. 
-  
-<p align="center">
-    <img src="figs/refcod.png" width="450"/> <br />
-    <em> 
-    Fig. 1: Visual comparison between the standard COD and our Ref-COD.
-    Given an image containing multiple camouflaged objects, the COD
-    model tends to find all possible camouflaged objects that are blended
-    into the background without discrimination, while the Ref-COD model
-    attempts to identify the camouflaged objects under the condition of a set
-    of referring images.
-    </em>
-</p>
+This repository contains code for BMRF-Net, a Boundary-Aware Multi-Scale
+Referring Fusion network for referring camouflaged object detection (Ref-COD).
+The model introduces a Feature Boundary Conditioning Module (FBCM), an
+Attention-based Residual Max Pooling (ARMP) pathway, a Multi-Scale Referring
+Feature Fusion (MRFF) module, and a Multi-Scale Feature Dissimilarity +
+Sharpness decoder (MSFD) to improve boundary localisation and mask
+completeness under reference guidance.
 
-> For technical questions, feel free to contact [zhangxuying1004@gmail.com]() and [bowenyin@mail.nankai.edu.cn](); For commercial licensing, please contact [cmm@nankai.edu.cn]().
-> If our work gives some inspiration to you, please cite it ([BibTeX](https://scholar.google.com.hk/scholar?hl=zh-CN&as_sdt=0%2C5&q=Referring+Camouflaged+Object+Detection+Xuying+&btnG=)) and star this project. Thank you!
+If you previously used this README as the LaTeX paper source, I can move
+the full paper into `docs/PAPER.tex` or `PAPER.tex` — confirm if you want
+that. The architecture figure (used in the paper) should be placed at
+`figs/architecture_diagram.pdf` or `architecture_diagram.pdf` at repo root.
 
-**Note that**
-I will upload the codes later, including:
-- [ ] The embedding process of the common representations of target objects; 
-- [ ] The attribution evaluation of different COD / Ref-COD methods;
-- [ ] Visualization.
-- [ ] Other tools.
+![BMRF-Net Architecture](figs/BMRF_Net%20Diagram.drawio.png)
 
-And you can first use my processed representations at the below dataset link if you are interested in our Ref-COD topic.
+This project reuses the R2C7K dataset and utilities; training, evaluation,
+and inference scripts remain available in the repository.
+
+## Key references
+- Paper: Referring Camouflaged Object Detection (TPAMI 2025).
+
+**Citation**
+
+If you use this work, please cite:
+
+```
+@inproceedings{author2026bmrf,
+  title={BMRF-Net: Boundary-Aware Multi-Scale Fusion for Referring Camouflaged Object Detection},
+  author={Surname, Given and Surname, Given and ...},
+  booktitle={Proceedings of ...},
+  year={2026}
+}
+```
+
+For questions or licensing inquiries, contact the authors (see original README contacts).
+
+## Project structure
+Top-level files and directories:
+
+| Path | Purpose |
+| --- | --- |
+| `train.py` | Training entrypoint. Edit `data_root` and hyperparams as needed. |
+| `test.py` | Evaluation script (computes metrics and saves predictions). |
+| `infer.py` | Inference pipeline for generating foreground / mask maps. |
+| `make_comparison.py` | Utilities to compare predictions across methods / checkpoints. |
+| `models/` | Model definitions and backbone implementations (includes `pvt_v2.py`, `bmrf_net.py`, `modules.py`). The implemented backbone is PVT-v2-B2 and the repository contains the BMRF-Net modules: FBCM, ARMP, MRFF, and MSFD. |
+| `data/` | Dataset loaders and helpers (`refdataset.py`, `utils.py`). |
+| `utils/` | Metrics and utility scripts used across training/testing. |
+| `snapshot/` | Place checkpoints here (`snapshot/saved_models/`). |
+| `figs/` | Figures used in the README and paper (e.g., `architecture.png`). |
+
+## Dataset: R2C7K
+R2C7K contains two subsets: `Camo` (camouflaged images) and `Ref` (reference images / features). Required structure:
+
+```
+R2C7K/
+  ├─ Camo/
+  │   ├─ train/        # training images and masks (64 categories)
+  │   └─ test/         # testing images and masks (64 categories)
+  └─ Ref/
+      ├─ Images/        # reference images (64 categories)
+      ├─ RefFeat_ICON-R/ # precomputed reference object representations
+      └─ Saliency_ICON-R/ # foreground maps used to generate object masks
+```
+
+Set `data_root` in `train.py`, `test.py`, and `infer.py` to point to your `R2C7K` folder.
 
 ## Environment setup
-``` 
+Preferred (Conda):
+
+```bash
 conda env create -f environment.yml
 conda activate refcod
 ```
 
-## Get Start
-**1. Dataset.**
-<p align="center">
-    <img src="figs/r2c7k.png" width="970"/> <br />
-    <em>
-      Fig. 2. Examples from our R2C7K dataset. Note that the camouflaged objects in Camo-subset are masked with their annotations in orange.
-    </em>
-</p>
+If you prefer pip, create `requirements.txt` from the Conda env and then:
 
-- Download our ensembled [R2C7K](https://pan.baidu.com/s/1LHdqpD3w24fcLb_dbR6DyA) dataset with access code ```2013``` on Baidu Netdisk.  
-```   
-├── R2C7K  
-    ├── Camo  
-        ├── train                # training set of camo-subset with 64 categories.  
-        └── test                 # tesing set of camo-subset with 64 categories.  
-    ├── Ref          
-        ├── Images               # all images of ref-subset with 64 categories.
-        ├── RefFeat_ICON-R       # all object representations of ref-subset with 64 categories.  
-        └── Saliency_ICON-R      # all foreground maps of ref-subset with 64 categories.  
+```bash
+pip install -r requirements.txt
 ```
-- Update the 'data_root' param with your R2C7K location in ```train.py```, ```infer.py``` and ```test.py```.
 
-**2. Framework**
-<p align="center">
-    <img src="figs/r2cnet.png" width="950"/> <br />
-    <em>
-      Fig. 3. Overall architecture of our R2CNet framework, which is composed of two branches, i.e., reference branch in green and segmentation branch
-in orange. In the reference branch, the common representation of a specified object from images is obtained by masking and pooling the visual
-features with the foreground map generated by a SOD network. In the segmentation branch, the visual features from the last three layers of the
-encoder are employed to represent the given image. Then, these two kinds of feature representations are fused and compared in the well-designed
-RMG module to generate a mask prior, which is used to enrich the visual feature among different scales to highlight the camouflaged targets in our
-RFE module. Finally, the enriched features are fed into the decoder to generate the final segmentation map. DSF: Dual-source Information Fusion, MSF: Multi-scale Feature Fusion, TM: Target Matching.
-    </em>
-</p>
+Note: `environment.yml` is included in the repository. Adjust CUDA / PyTorch versions to match your GPU.
 
-**3. Infer.**
-- Download the pre-trained [r2cnet.pth](https://pan.baidu.com/s/1daqxGTy120JondOIvCAEOw) checkpoints with access code ```2023``` on Baidu Netdisk.
-- Put the checkpoint file on './snapshot/saved_models/'.
-- Run ```python infer.py``` to generate the foreground maps of R2CNet.
-- You can also directly refer to the predictions [R2CNet-Maps](https://pan.baidu.com/s/1unQQOn9w3rW9aWdnYf_zrA) with access code ```2023``` on Baidu Netdisk.
+## Quick start: training, evaluation, inference
 
-**4. Test.**
-- Assert that the pre-trained [r2cnet.pth](https://pan.baidu.com/s/1daqxGTy120JondOIvCAEOw) checkpoint file has been placed in './snapshot/saved_models/'.
-- Run ```python test.py``` to evaluate the performance of R2CNet.
+1) Train (example):
 
-**5. Ref-COD Benchmark Results.**
-<p align="center">
-    <em>
-      Tab. 1. Comparison of the COD models with their Ref-COD counterparts. All models are evaluated on a NVIDIA RTX 3090 GPU. ‘R-50’: ResNet-50 [82],
-      ‘E-B4’: EfficientNet-B4 [86], ‘R2-50’: Res2Net-50 [87], ‘R3
-      -50’: Triple ResNet-50 [2]. ‘-Ref’: the model with image references composed of salient
-      objects. ‘Attribute’: the attribute of each network, ‘Single-obj’: the scene of a single camouflaged object, ‘Multi-obj’: the scene of multiple
-      camouflaged objects, ‘Overall’: all scenes containing camouflaged objects.
-    </em>
-    <img src="figs/benchmarks.png" width="1000"/> <br />
-</p>
+```bash
+python train.py --data_root /path/to/R2C7K --batch_size 16 --lr 5e-4 --backbone_lr 5e-5 --epochs 60
+```
 
-## Acknowlegement
-This repo is mainly built based on [SINet-V2](https://github.com/GewelsJI/SINet-V2), [PFENet](https://github.com/dvlab-research/PFENet) and [MethodsCmp](https://github.com/lartpang/MethodsCmp). Thanks for their great work!
+2) Evaluate (test):
 
+```bash
+# Ensure checkpoint saved in snapshot/saved_models/
+python test.py --checkpoint snapshot/saved_models/bmrf_net.pth --data_root /path/to/R2C7K
+```
+
+3) Inference (single image or folder):
+
+```bash
+python infer.py --checkpoint snapshot/saved_models/bmrf_net.pth --input /path/to/images --output outputs/
+```
+
+4) Make comparisons between methods:
+
+```bash
+python make_comparison.py --pred_dir outputs/ --gt_dir /path/to/R2C7K/Camo/test
+```
+
+## Evaluation metrics
+Supported metrics (computed in `utils/metrics.py`):
+- Structure-measure (`S_m` / Sm)
+- Adaptive E-measure (`adpE`)
+- Weighted F-measure (`wF`)
+- Mean Absolute Error (`MAE` / `M`)
+
+Use `test.py` to compute these metrics on test splits and save per-image predictions to `preds/`.
+
+## Checkpoints
+- Place model checkpoints under `snapshot/saved_models/` (e.g., `bmrf_net.pth`).
+
+## Notes & acknowledgements
+This repo builds on prior COD frameworks including SINet-V2, PFENet and MethodsCmp. See original README for dataset download links and additional figures. The original author contacts and dataset links remain valid.
+
+If you'd like, I can also:
+- Extract a `requirements.txt` from `environment.yml`.
+- Add example config files and a short script to run end-to-end experiments.
+
+---
+
+
+# BMRF-Net-architecture
