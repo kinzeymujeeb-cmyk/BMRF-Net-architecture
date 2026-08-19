@@ -104,7 +104,7 @@ python infer.py --checkpoint snapshot/saved_models/bmrf_net_best.pth --input /pa
 python make_comparison.py --pred_dir outputs/ --gt_dir /path/to/R2C7K/Camo/test
 Evaluation Metrics
 Evaluated via utils/metrics.py:
-Structure-measure ($S_m$ / Sm)
-Adaptive E-measure ($adpE$)
-Weighted F-measure ($wF$)
-Mean Absolute Error ($M$ / MAE)
+Structure-measure (Sm)
+Adaptive E-measure (adpE)
+Weighted F-measure (wF)
+Mean Absolute Error (MAE)
